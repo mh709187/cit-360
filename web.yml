@@ -47,7 +47,7 @@
       template: src=web/php.ini.j2 dest=/etc/php.ini mode=0644
       register: php_conf
 
-    - name:copies config file
+    - name: copies config file
       #copies "php-fpm-web.config" to new destination
       become: yes
       copy: src=web/php-fpm-web.conf dest=/etc/php-fpm.d/www.conf mode=0644
