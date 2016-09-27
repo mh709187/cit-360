@@ -12,7 +12,7 @@
 
     - name: manage service 
       become: yes
-      systemd: name=mariadb state=started enabled=yes
+      service: name=mariadb state=started enabled=yes
 
     - name: sends file to remote location
       #the file will be sent to "/tmp/mariadb_answers.txt"
