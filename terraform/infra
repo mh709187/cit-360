@@ -109,3 +109,11 @@ resource "aws_security_group" "allow"{
 	 protocol = "tcp"
 	}
 }
+resource "aws_instance" "amazon_linux" {
+    ami = "ami-5ec1673e"
+    instance_type = "t2.micro"
+    subnet_id = "${aws_subnet.public_subnet_a.id}"
+
+tags {
+	Name = "Amazon Linux"
+}
