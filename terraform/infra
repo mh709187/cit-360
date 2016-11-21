@@ -3,6 +3,11 @@ variable "vpc_id" {
   default = "vpc-a9514ecd"
 }
 
+#key pair
+variable "aws_key_name" {
+  description = "Key pair name"
+  default = "cit360"
+}
 
 # create the gateway
 resource "aws_internet_gateway" "gw" {
@@ -13,6 +18,26 @@ resource "aws_internet_gateway" "gw" {
   }
 }
 
+#Private NAT gateway
+resource "aws_eip" "nat" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = "${aws_eip.nat.id}"
+  subnet_id = "${aws_subnet.private_subnet_a.id}"
+  depends_on = ["aws_internet_gateway.gw"]
+}
+
+#private routing table
+resource "aws_route_table" "private_routing_table" {
+  vpc_id = "${var.vpc_id}"
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_nat_gateway.nat.id}"
+  }
+}
 # Public Routing Table
 resource "aws_route_table" "public_routing_table" {
   vpc_id = "${var.vpc_id}"
@@ -107,13 +132,27 @@ resource "aws_security_group" "allow"{
 	 from_port = 0
 	 to_port = 22
 	 protocol = "tcp"
+	 cidr_blocks = ["0.0.0.0/0"]
 	}
+	vpc_id="${var.vpc_id}"
 }
-resource "aws_instance" "amazon_linux" {
-    ami = "ami-5ec1673e"
-    instance_type = "t2.micro"
-    subnet_id = "${aws_subnet.public_subnet_a.id}"
+#bastion instance
+resource "aws_ami_copy" "linux" {
+    name = "amazon_linux_ami"
+    source_ami_id = "ami-5ec1673e"
+    source_ami_region = "us-west-2"
+}
 
-tags {
-	Name = "Amazon Linux"
+resource "aws_instance" "bastion" {
+	ami = "${aws_ami_copy.linux.id}"
+	availability_zone = "us-west-2a"
+	instance_type = "t2.micro"
+	key_name = "${var.aws_key_name}"
+	security_groups = ["${aws_security_group.allow.id}"]
+	subnet_id = "${aws_subnet.public_subnet_a.id}"
+}
+
+resource "aws_eip" "bastion" {
+	instance = "${aws_instance.bastion.id}"
+	vpc = true
 }
