@@ -200,19 +200,73 @@ resource "aws_db_instance" "default" {
 	multi_az = "false"
 }
 
-#bastion instance
+#Elastic Load Balancer
+
+resource "aws_elb" "default_elb"{
+	name "elb"
+	subnets = ["${aws_subnet.public_subnet_b.id}", "${aws_subnet.public_subnet_c.id}"]
+
+	listener {
+		instance_port = 80
+		instance_protocol = "tcp"
+		lb_port = 80
+		lb_protocol = "tcp"
+	}
+	health_check {
+		healthy_threshold = 2
+		unhealthy_threshold = 2
+		timeout = 5
+		target "HTTP:80/"
+		interval = 30
+	}
+	instances = ["${aws_instance.web_b.id}", "${aws_instance.web_c.id}"]
+	connection_draining = "true"
+	connection_draining_timeout = 60
+	security_groups = ["${aws_security_group.elb_security.id}"}
+	
+	tags {
+		Name = "LoadBalancer"
+	}
+}
+
+#instances
 resource "aws_ami_copy" "linux" {
     name = "amazon_linux_ami"
     source_ami_id = "ami-5ec1673e"
     source_ami_region = "us-west-2"
 }
+resource "aws_instance" "web_b" {
+	ami = "${aws_ami_copy.linux.id}"
+	availabilty_zone = "us-west-2b"
+	instance_type = "t2.micro"
+	key_name = "${var.aws_key_name}"
+	security_groups = ["${aws_security_group.elb_security.id}"]
+	subnet_id = "${aws_subnet.private_subnet_b.id}"
+	tags{
+		Name = "WebSever-b"
+		Service = "curriculum"
+	}
+}	
+
+resource "aws_instance" "web_c" {
+	ami = "${aws_ami_copy.linux.id}"
+	availabilty_zone = "us-west-2c"
+	instance_type = "t2.micro"
+	key_name = "${var.aws_key_name}"
+	security_groups = ["${aws_security_group.elb_security.id}"]
+	subnet_id = "${aws_subnet.private_subnet_c.id}"
+	tags{
+		Name = "WebSever-c"
+		Service = "curriculum"
+	}
+}	
 
 resource "aws_instance" "bastion" {
 	ami = "${aws_ami_copy.linux.id}"
 	availability_zone = "us-west-2a"
 	instance_type = "t2.micro"
 	key_name = "${var.aws_key_name}"
-	security_groups = ["${aws_security_group.allow.id}"]
+	security_groups = ["${aws_security_group.ssh.id}"]
 	subnet_id = "${aws_subnet.public_subnet_a.id}"
 }
 
