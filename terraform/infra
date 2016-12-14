@@ -148,7 +148,7 @@ resource "aws_security_group" "db_security"{
 		from_port = 0
 		to_port = 0
 		protocol = "-1"
-		cidr_block = {"172.31.0.0/16"}
+		cidr_blocks = ["172.31.0.0/16"]
 }
 	vpc_id = "${var.vpc_id}"
 }
@@ -158,13 +158,13 @@ resource "aws_security_group" "vpc_ingress"{
 		from_port = 80
 		to_port = 80
 		protocol = "tcp"
-		cidr_block = {"172.31.0.0/16"}
+		cidr_blocks = ["172.31.0.0/16"]
 }
 	ingress{
 		from_port = 22
 		to_port = 22
 		protocol = "tcp"
-		cidr_blocks = [172.31.0.0/16]
+		#cidr_blocks = [172.31.0.0/16]
 		}
 }
 
@@ -173,7 +173,7 @@ resource "aws_security_group" "elb_security"{
 		from_port = 80
 		to_port = 80
 		protocol = "tcp"
-		cidr_block = {"0.0.0.0/0"}
+		cidr_blocks = ["0.0.0.0/0"]
 }
 }
 
@@ -189,12 +189,12 @@ resource "aws_db_subnet_group" "db_group" {
 resource "aws_db_instance" "default" {
 	allocated_storage = 5
 	storage_type = "gp2"
-	engine = "mariadb
+	engine = "mariadb"
 	engine_version = "10.0.24"
 	instance_class = "db.t2.micro"
 	name = "db_default"
 	username = "curriculum"
-	password = "${var.db_password}"
+	password = "funnypeoplelikedressing"
 	db_subnet_group_name = "db_subnet_group"
 	publicly_accessible = "false"
 	multi_az = "false"
@@ -202,10 +202,9 @@ resource "aws_db_instance" "default" {
 
 #Elastic Load Balancer
 
-resource "aws_elb" "default_elb"{
-	name "elb"
-	subnets = ["${aws_subnet.public_subnet_b.id}", "${aws_subnet.public_subnet_c.id}"]
-
+resource "aws_elb" "default_elb" {
+	name = "Loadblancer"
+	subnets = ["${aws_subnet.public_subnet_b.id}","${aws_subnet.public_subnet_c.id}"]
 	listener {
 		instance_port = 80
 		instance_protocol = "tcp"
@@ -216,18 +215,18 @@ resource "aws_elb" "default_elb"{
 		healthy_threshold = 2
 		unhealthy_threshold = 2
 		timeout = 5
-		target "HTTP:80/"
+		target = "HTTP:80/"
 		interval = 30
 	}
 	instances = ["${aws_instance.web_b.id}", "${aws_instance.web_c.id}"]
 	connection_draining = "true"
 	connection_draining_timeout = 60
-	security_groups = ["${aws_security_group.elb_security.id}"}
+	security_groups = ["${aws_security_group.elb_security.id}"]
 	
 	tags {
-		Name = "LoadBalancer"
+		Name = "load_balancer"
 	}
-}
+	}
 
 #instances
 resource "aws_ami_copy" "linux" {
@@ -237,7 +236,7 @@ resource "aws_ami_copy" "linux" {
 }
 resource "aws_instance" "web_b" {
 	ami = "${aws_ami_copy.linux.id}"
-	availabilty_zone = "us-west-2b"
+	availability_zone = "us-west-2b"
 	instance_type = "t2.micro"
 	key_name = "${var.aws_key_name}"
 	security_groups = ["${aws_security_group.elb_security.id}"]
@@ -250,7 +249,7 @@ resource "aws_instance" "web_b" {
 
 resource "aws_instance" "web_c" {
 	ami = "${aws_ami_copy.linux.id}"
-	availabilty_zone = "us-west-2c"
+	availability_zone = "us-west-2c"
 	instance_type = "t2.micro"
 	key_name = "${var.aws_key_name}"
 	security_groups = ["${aws_security_group.elb_security.id}"]
